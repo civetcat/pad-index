@@ -4,10 +4,12 @@ import { connection } from "next/server";
 import { AttributePips } from "@/components/monster/attribute-pips";
 import { AwakeningPicker } from "@/components/monster/awakening-picker";
 import { SkillText } from "@/components/monster/skill-text";
+import { MonsterCardArt } from "@/components/monster/monster-card-art";
 import { MonsterPortrait } from "@/components/monster/monster-portrait";
 import { getAppDatabase } from "@/lib/db/app-db";
 import { displayMonsterName, labelOrUnknown, typeLabels } from "@/lib/labels";
 import { plusBonus, plusTiers, statAtLevel, type StatKind } from "@/lib/stats";
+import { skillTextCht } from "@/lib/skills/chinese";
 import { presentSkill } from "@/lib/skills/present";
 import { getMonster, neighborMonsterIds, type MonsterBrief } from "@/lib/queries/monsters";
 
@@ -40,7 +42,8 @@ export default async function MonsterPage({
           <MonsterStep href={neighbors.next} label="下一隻" />
         </div>
       </div>
-      <header className="flex gap-4 rounded-lg border border-line bg-card p-4">
+      <header className="flex flex-wrap items-start gap-4 rounded-lg border border-line bg-card p-4">
+        <MonsterCardArt monsterId={monster.monsterId} name={monster.name} />
         <MonsterPortrait
           monsterId={monster.monsterId}
           size={100}
@@ -48,7 +51,7 @@ export default async function MonsterPage({
         />
         <div className="min-w-0">
         <p className="font-mono text-sm text-muted">#{monster.monsterId}</p>
-        <h1 lang="ja" className="mt-1 text-2xl font-semibold">{monster.name}</h1>
+        <h1 lang="ja" className="mt-1 break-words text-xl font-semibold sm:text-2xl">{monster.name}</h1>
         <p className="mt-1 text-sm text-muted">
           {monster.nameCht && monster.nameCht !== monster.name ? monster.nameCht : ""}
         </p>
@@ -130,7 +133,7 @@ function StatTable({
   ];
   return (
     <section className="overflow-x-auto rounded-lg border border-line bg-card p-4">
-      <table className="w-full text-sm">
+      <table className="w-full min-w-[36rem] text-sm whitespace-nowrap">
         <thead>
           <tr className="text-muted">
             <th className="pb-2 text-left font-medium" />
@@ -199,7 +202,7 @@ function SideArrow({ href, side }: { href: number | null; side: "left" | "right"
   return (
     <Link
       aria-label={side === "left" ? "上一隻" : "下一隻"}
-      className={`fixed top-1/2 z-10 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-card text-3xl leading-none ${
+      className={`fixed top-1/2 z-10 hidden h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-card text-3xl leading-none md:flex ${
         side === "left" ? "left-3" : "right-3"
       }`}
       href={`/monster/${href}`}
@@ -246,6 +249,11 @@ function SkillBlock({
           {presented.note ? <SkillText text={presented.note} /> : null}
           {presented.assistVanishes ? <p className="text-sm">使用時，這隻輔助會消失。</p> : null}
           {presented.body ? <SkillText text={presented.body} /> : null}
+          {presented.body ? (
+            <p lang="zh-Hant" className="mt-1 whitespace-pre-wrap text-sm leading-7 text-muted">
+              {skillTextCht(presented.body)}
+            </p>
+          ) : null}
           {presented.hasteTurns !== null ? (
             <p className="mt-2 text-sm">其他技能縮短 {presented.hasteTurns} 回合。</p>
           ) : null}

@@ -1,12 +1,12 @@
 import { AwakeningIcon } from "@/components/monster/awakening-picker";
-import { skillTokenIcon } from "@/lib/skills/tokens";
+import { displaySkillText, skillTokenIcon } from "@/lib/skills/tokens";
 
 const orbSheet = "https://mapaler.github.io/PADDashFormation/images/icon-orbs.png";
 const skillSheet = "https://mapaler.github.io/PADDashFormation/images/icon-skills.png";
 const typeSheet = "https://mapaler.github.io/PADDashFormation/images/type.png";
 
 export function SkillText({ text }: { text: string }) {
-  const parts = text.replaceAll("^qs^", "").replaceAll("^p", "").split(/(\[[^\]\n]+\])/g);
+  const parts = displaySkillText(text).split(/(\[[^\]\n]+\])/g);
   return (
     <p lang="ja" className="mt-2 whitespace-pre-wrap text-sm leading-8">
       {parts.map((part, index) => {

@@ -132,6 +132,10 @@ const awakenings: Record<string, number> = {
   "木ドロップ強化+": 101,
 };
 
+export function displaySkillText(text: string) {
+  return text.replaceAll("^qs^", "").replaceAll("^p", "").replaceAll("|5属性|", "");
+}
+
 export function skillTokenIcon(name: string): SkillTokenIcon | null {
   if (name === "ロック") {
     return { kind: "lock", label: "鎖定" };

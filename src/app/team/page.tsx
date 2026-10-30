@@ -36,7 +36,7 @@ export default function TeamPage() {
       </p>
       <form className="flex gap-2" onSubmit={search}>
         <input className="flex-1 rounded border border-line bg-card px-3 py-2" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="名稱或 ID" />
-        <button className="rounded bg-accent px-3 py-2 text-sm text-white" type="submit">搜尋</button>
+        <button className="shrink-0 rounded bg-accent px-3 py-2 text-sm text-white" type="submit">搜尋</button>
       </form>
       <ul className="grid gap-2 sm:grid-cols-2">
         {hits.map((hit) => (

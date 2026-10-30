@@ -13,5 +13,12 @@ describe("catalog filters", () => {
     expect(catalogHref({ q: "Tyrra", attribute: 0, effect: "heal" }, 2)).toBe(
       "/?q=Tyrra&attr=0&effect=heal&page=2",
     );
+    expect(parseMonsterFilters({ awk: ["49x2", "21", "49x3", "no"] }).awakenings).toEqual([
+      { code: 21, count: 1 },
+      { code: 49, count: 3 },
+    ]);
+    expect(catalogHref({ awakenings: [{ code: 21, count: 1 }, { code: 49, count: 2 }], skill: "fire", slot: "leader" })).toBe(
+      "/?awk=21&awk=49x2&skill=fire&slot=leader",
+    );
   });
 });

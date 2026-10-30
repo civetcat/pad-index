@@ -30,9 +30,34 @@ describe("catalog queries", () => {
 
       const byEffect = await listMonsters(
         opened.db,
-        parseMonsterFilters({ effect: "attribute_damage" }),
+        parseMonsterFilters({ effect: "attribute_damage", slot: "active" }),
       );
       expect(byEffect.items.map((item) => item.monsterId)).toEqual([1]);
+      const memberSkill = await listMonsters(
+        opened.db,
+        parseMonsterFilters({ skill: "攻撃力×10倍", slot: "active" }),
+      );
+      expect(memberSkill.items.map((item) => item.monsterId)).toEqual([1]);
+      const unlike = await listMonsters(
+        opened.db,
+        parseMonsterFilters({ skill: "轉珠", slot: "active" }),
+      );
+      expect(unlike.items).toEqual([]);
+      const otherNumber = await listMonsters(
+        opened.db,
+        parseMonsterFilters({ skill: "100", slot: "active" }),
+      );
+      expect(otherNumber.items).toEqual([]);
+      const leaderSkill = await listMonsters(
+        opened.db,
+        parseMonsterFilters({ skill: "火属性攻撃", slot: "leader" }),
+      );
+      expect(leaderSkill.items).toEqual([]);
+      const leaderText = await listMonsters(
+        opened.db,
+        parseMonsterFilters({ skill: "未分類", slot: "leader" }),
+      );
+      expect(leaderText.items.map((item) => item.monsterId)).toEqual([1]);
 
       const detail = await getMonster(opened.db, 1);
       expect(detail?.previous?.monsterId).toBe(1929);

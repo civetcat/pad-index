@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { classifySkill } from "@/lib/skills/classify";
 import { presentSkill } from "@/lib/skills/present";
-import { skillTokenIcon } from "@/lib/skills/tokens";
+import { displaySkillText, skillTokenIcon } from "@/lib/skills/tokens";
 import heatBreath from "../fixtures/skill-heat-breath.json";
 
 describe("skill classifier", () => {
@@ -58,5 +58,8 @@ describe("skill classifier", () => {
     expect(skillTokenIcon("バインド耐性+")?.kind).toBe("awakening");
     expect(skillTokenIcon("釘ドロップ")).toEqual({ kind: "skill", column: 0, row: 35, label: "釘珠" });
     expect(skillTokenIcon("HF")).toBeNull();
+    expect(displaySkillText("盤面を[火][水][木][光][闇]|5属性|に変化。")).toBe(
+      "盤面を[火][水][木][光][闇]に変化。",
+    );
   });
 });

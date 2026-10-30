@@ -22,7 +22,7 @@ export function LanguageSwitch() {
     writeLang(lang);
   }
   return (
-    <span className="flex gap-1 text-xs">
+    <span className="flex shrink-0 items-center gap-1 px-2 text-xs">
       {(Object.keys(labels) as Array<Exclude<DisplayLang, "en">>).map((lang) => (
         <button
           key={lang}

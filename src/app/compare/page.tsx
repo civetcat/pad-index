@@ -33,7 +33,7 @@ export default async function ComparePage({
           defaultValue={ids.join(",")}
           placeholder="例如 1,5,9"
         />
-        <button className="rounded bg-accent px-3 py-2 text-sm text-white" type="submit">比較</button>
+        <button className="shrink-0 rounded bg-accent px-3 py-2 text-sm text-white" type="submit">比較</button>
       </form>
       {details.length === 0 ? (
         <p className="text-muted">輸入最多 3 個怪物 ID。</p>

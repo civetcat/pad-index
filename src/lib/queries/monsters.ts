@@ -1,10 +1,11 @@
-import { and, asc, count, desc, eq, gt, inArray, lt, ne, or, sql } from "drizzle-orm";
+import { type SQL, and, asc, count, desc, eq, gt, inArray, lt, ne, or, sql } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import {
   evolutions,
   monsters,
   skills,
 } from "@/lib/db/schema";
+import { skillSearchNeedles } from "@/lib/skills/search";
 import type { MonsterFilters } from "./filters";
 
 const briefColumns = {
@@ -234,32 +235,72 @@ function monsterWhere(filters: MonsterFilters) {
       sql`EXISTS (SELECT 1 FROM json_each(${monsters.typesJson}) WHERE json_each.value = ${filters.type})`,
     );
   }
-  if (filters.awakening !== undefined) {
+  for (const awakening of filters.awakenings) {
     clauses.push(
-      sql`EXISTS (SELECT 1 FROM monster_awakenings WHERE monster_id = ${monsters.monsterId} AND awakening_code = ${filters.awakening})`,
+      awakening.count <= 1
+        ? sql`EXISTS (
+            SELECT 1 FROM monster_awakenings
+            WHERE monster_id = ${monsters.monsterId} AND awakening_code = ${awakening.code}
+          )`
+        : sql`(
+            SELECT COUNT(*) FROM monster_awakenings
+            WHERE monster_id = ${monsters.monsterId}
+              AND awakening_code = ${awakening.code}
+              AND awakening_type = 'normal'
+          ) >= ${awakening.count}`,
     );
   }
-  if (filters.slot) {
-    clauses.push(
-      sql`EXISTS (
-        SELECT 1 FROM monster_skills
-        WHERE monster_skills.monster_id = ${monsters.monsterId}
-          AND monster_skills.slot_type = ${filters.slot}
-      )`,
-    );
-  }
-  if (filters.effect) {
-    clauses.push(
-      sql`EXISTS (
-        SELECT 1 FROM monster_skills
-        JOIN skill_effects ON skill_effects.skill_id = monster_skills.skill_id
-        WHERE monster_skills.monster_id = ${monsters.monsterId}
-          AND skill_effects.effect_category = ${filters.effect}
-          AND skill_effects.parse_status != 'unparsed'
-      )`,
-    );
+  const skillClause = skillMatch(filters);
+  if (skillClause) {
+    clauses.push(skillClause);
   }
   return and(...clauses);
+}
+
+function skillMatch(filters: MonsterFilters) {
+  const parts: SQL[] = [];
+  if (filters.slot) {
+    parts.push(sql`monster_skills.slot_type = ${filters.slot}`);
+  }
+  const skillText = skillTextClause(filters.skill);
+  if (skillText) {
+    parts.push(skillText);
+  }
+  if (filters.effect) {
+    parts.push(sql`EXISTS (
+      SELECT 1 FROM skill_effects
+      WHERE skill_effects.skill_id = monster_skills.skill_id
+        AND skill_effects.effect_category = ${filters.effect}
+        AND skill_effects.parse_status != 'unparsed'
+    )`);
+  }
+  if (parts.length === 0) {
+    return null;
+  }
+  const where = parts.reduce((left, right) => sql`${left} AND ${right}`);
+  return sql`${monsters.monsterId} IN (
+    SELECT monster_skills.monster_id
+    FROM monster_skills
+    JOIN skills ON skills.skill_id = monster_skills.skill_id
+    WHERE ${where}
+  )`;
+}
+
+function skillTextClause(input: string) {
+  const needles = skillSearchNeedles(input);
+  if (needles.length === 0) {
+    return null;
+  }
+  const parts = needles.map((needle) => {
+    const like = `%${needle.replace(/[\\%_]/g, "\\$&")}%`;
+    const compact = `%${needle.replace(/[をがにで\\%_]/g, (char) => (char === "\\" || char === "%" || char === "_" ? `\\${char}` : ""))}%`;
+    return sql`(
+      skills.name LIKE ${like} ESCAPE '\\'
+      OR skills.description LIKE ${like} ESCAPE '\\'
+      OR replace(replace(replace(replace(skills.description, 'を', ''), 'が', ''), 'に', ''), 'で', '') LIKE ${compact} ESCAPE '\\'
+    )`;
+  });
+  return parts.reduce((left, right) => sql`(${left}) AND (${right})`);
 }
 
 function toBrief(row: {

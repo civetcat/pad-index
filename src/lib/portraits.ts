@@ -1,5 +1,13 @@
 const sheetBase = "https://mapaler.github.io/PADDashFormation/images/cards_ja";
+const cardArtBase = "https://pazparty.com/b_img";
 export const cardFrameSheet = "https://mapaler.github.io/PADDashFormation/images/CARDFRAME2.png";
+
+export function cardArtUrl(monsterId: number) {
+  if (!Number.isInteger(monsterId) || monsterId <= 0) {
+    return null;
+  }
+  return `${cardArtBase}/${monsterId}.jpg`;
+}
 
 export function portraitPlacement(monsterId: number) {
   if (!Number.isInteger(monsterId) || monsterId <= 0) {

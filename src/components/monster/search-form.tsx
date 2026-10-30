@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { awakeningLabels, attributeLabels, typeLabels } from "@/lib/labels";
+import { AwakeningFilter } from "@/components/monster/awakening-filter";
+import { attributeLabels, typeLabels } from "@/lib/labels";
 import { effectCategories, effectCategoryLabels } from "@/lib/skills/classify";
 import type { MonsterFilters } from "@/lib/queries/filters";
 
@@ -44,20 +45,20 @@ export function SearchForm({ filters }: { filters: MonsterFilters }) {
         </select>
       </label>
       <label className="flex flex-col gap-1 text-sm">
-        <span className="text-muted">覺醒</span>
-        <select className="rounded border border-line bg-background px-3 py-2" name="awk" defaultValue={filters.awakening ?? ""}>
-          <option value="">全部</option>
-          {Object.entries(awakeningLabels).map(([code, label]) => (
-            <option key={code} value={code}>{label}</option>
-          ))}
-        </select>
+        <span className="text-muted">技能文字</span>
+        <input
+          className="rounded border border-line bg-background px-3 py-2"
+          name="skill"
+          defaultValue={filters.skill}
+          placeholder="貼上一段技能原文或中文對照"
+        />
       </label>
       <label className="flex flex-col gap-1 text-sm">
         <span className="text-muted">技能欄</span>
         <select className="rounded border border-line bg-background px-3 py-2" name="slot" defaultValue={filters.slot ?? ""}>
-          <option value="">全部</option>
+          <option value="">隊長和隊員</option>
           <option value="leader">隊長技能</option>
-          <option value="active">主動技能</option>
+          <option value="active">隊員技能</option>
         </select>
       </label>
       <label className="flex flex-col gap-1 text-sm">
@@ -69,6 +70,7 @@ export function SearchForm({ filters }: { filters: MonsterFilters }) {
           ))}
         </select>
       </label>
+      <AwakeningFilter selected={filters.awakenings} />
       <div className="flex items-end gap-2 sm:col-span-2 lg:col-span-3">
         <button className="rounded bg-accent px-4 py-2 text-sm font-medium text-white" type="submit">
           搜尋

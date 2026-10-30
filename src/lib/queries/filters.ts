@@ -5,7 +5,8 @@ export type MonsterFilters = {
   attribute?: number;
   rarity?: number;
   type?: number;
-  awakening?: number;
+  awakenings: Array<{ code: number; count: number }>;
+  skill: string;
   effect?: string;
   slot?: "active" | "leader";
   page: number;
@@ -20,7 +21,8 @@ export function parseMonsterFilters(
     attribute: optionalInt(first(params.attr)),
     rarity: optionalInt(first(params.rarity)),
     type: optionalInt(first(params.type)),
-    awakening: optionalInt(first(params.awk)),
+    awakenings: awakeningCounts(params.awk),
+    skill: first(params.skill)?.trim() ?? "",
     effect: first(params.effect)?.trim() || undefined,
     slot: parseSlot(first(params.slot)),
     page: Math.max(1, optionalInt(first(params.page)) ?? 1),
@@ -45,8 +47,11 @@ export function catalogHref(
   if (filters.type !== undefined) {
     params.set("type", String(filters.type));
   }
-  if (filters.awakening !== undefined) {
-    params.set("awk", String(filters.awakening));
+  for (const awakening of filters.awakenings ?? []) {
+    params.append("awk", awakening.count > 1 ? `${awakening.code}x${awakening.count}` : String(awakening.code));
+  }
+  if (filters.skill) {
+    params.set("skill", filters.skill);
   }
   if (filters.effect) {
     params.set("effect", filters.effect);
@@ -67,6 +72,29 @@ function first(value: string | string[] | undefined) {
 
 function parseSlot(value: string | undefined): "active" | "leader" | undefined {
   return value === "active" || value === "leader" ? value : undefined;
+}
+
+const maxAwakeningCount = 8;
+
+function awakeningCounts(value: string | string[] | undefined) {
+  const raw = Array.isArray(value) ? value : value ? [value] : [];
+  const counts = new Map<number, number>();
+  for (const item of raw) {
+    const match = /^(\d+)(?:x(\d+))?$/.exec(item);
+    if (!match) {
+      continue;
+    }
+    const code = Number(match[1]);
+    const count = Math.min(maxAwakeningCount, Number(match[2] ?? 1));
+    if (code <= 0 || count <= 0) {
+      continue;
+    }
+    counts.set(code, Math.max(counts.get(code) ?? 0, count));
+  }
+  return [...counts]
+    .sort(([left], [right]) => left - right)
+    .slice(0, 24)
+    .map(([code, count]) => ({ code, count }));
 }
 
 function optionalInt(value: string | undefined) {

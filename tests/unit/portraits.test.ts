@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cardFramePlacement, portraitPlacement } from "@/lib/portraits";
+import { cardArtUrl, cardFramePlacement, portraitPlacement } from "@/lib/portraits";
 import { classifySkill } from "@/lib/skills/classify";
 
 describe("portraits and skill text", () => {
@@ -10,6 +10,8 @@ describe("portraits and skill text", () => {
       y: 0,
     });
     expect(portraitPlacement(101)?.url).toContain("CARDS_002.PNG");
+    expect(cardArtUrl(13904)).toBe("https://pazparty.com/b_img/13904.jpg");
+    expect(cardArtUrl(0)).toBeNull();
   });
 
   it("stacks the game card frame by attribute slot", () => {
