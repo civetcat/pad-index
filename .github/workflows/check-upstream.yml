@@ -1,0 +1,32 @@
+name: check-upstream
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: corepack pnpm install --frozen-lockfile
+      - run: corepack pnpm tsx scripts/check-upstream.ts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: upstream-check
+          path: data/upstream-check.json
+      - name: Notify deployed site if configured
+        if: ${{ secrets.SITE_URL != '' && secrets.ADMIN_SECRET != '' }}
+        run: curl --fail-with-body -X POST -H "Authorization: Bearer ${ADMIN_SECRET}" "${SITE_URL}/api/admin/check"
+        env:
+          ADMIN_SECRET: ${{ secrets.ADMIN_SECRET }}
+          SITE_URL: ${{ secrets.SITE_URL }}

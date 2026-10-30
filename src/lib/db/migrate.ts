@@ -21,7 +21,7 @@ function ensureFileParent(url: string) {
 export async function openDatabase(url = resolveDatabaseUrl()) {
   ensureFileParent(url);
   const client = createClient({ url });
-  const db = drizzle(client, { schema: { dataSources } });
+  const db = drizzle(client);
   return { client, db, url };
 }
 

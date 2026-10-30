@@ -33,6 +33,20 @@ corepack pnpm dev
 
 開發伺服器位址以終端機輸出為準，通常是 http://localhost:3000。
 
+## 資料匯入
+
+```bash
+corepack pnpm db:import
+```
+
+這會下載 PADDashFormation 的公開 JSON，驗證後寫入本機 SQLite。重複執行不會產生重複怪物。細節見 [docs/IMPORT.md](docs/IMPORT.md)。
+
+更新檢查只看 commit，不套用：
+
+```bash
+corepack pnpm upstream:check
+```
+
 ## 資料庫初始化
 
 ```bash

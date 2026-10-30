@@ -1,9 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  cacheComponents: true,
-  partialPrefetching: true,
+  // vinext does not fully support cacheComponents yet. Keep pages dynamic.
+  serverExternalPackages: ["@libsql/client", "libsql"],
   turbopack: {
     rules: {
       "*.css": {

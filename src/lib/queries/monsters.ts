@@ -1,0 +1,306 @@
+import { and, asc, count, desc, eq, gt, inArray, lt, ne, or, sql } from "drizzle-orm";
+import type { LibSQLDatabase } from "drizzle-orm/libsql";
+import {
+  evolutions,
+  monsters,
+  skills,
+} from "@/lib/db/schema";
+import type { MonsterFilters } from "./filters";
+
+const briefColumns = {
+  monsterId: monsters.monsterId,
+  name: monsters.name,
+  nameEn: monsters.nameEn,
+  nameCht: monsters.nameCht,
+  attributePrimary: monsters.attributePrimary,
+  attributeSecondary: monsters.attributeSecondary,
+  attributeTertiary: monsters.attributeTertiary,
+  rarity: monsters.rarity,
+  typesJson: monsters.typesJson,
+  maxLevel: monsters.maxLevel,
+  hpMax: monsters.hpMax,
+  atkMax: monsters.atkMax,
+  rcvMax: monsters.rcvMax,
+};
+
+export type MonsterBrief = {
+  monsterId: number;
+  name: string;
+  nameEn: string | null;
+  nameCht: string | null;
+  attributePrimary: number | null;
+  attributeSecondary: number | null;
+  attributeTertiary: number | null;
+  rarity: number | null;
+  types: number[];
+  maxLevel: number | null;
+  hpMax: number | null;
+  atkMax: number | null;
+  rcvMax: number | null;
+};
+
+export async function listMonsters(db: LibSQLDatabase, filters: MonsterFilters) {
+  const where = monsterWhere(filters);
+  const totalRow = await db.select({ total: count() }).from(monsters).where(where);
+  const total = totalRow[0]?.total ?? 0;
+  const pageCount = Math.max(1, Math.ceil(total / filters.pageSize));
+  const page = Math.min(filters.page, pageCount);
+  const rows = await db
+    .select(briefColumns)
+    .from(monsters)
+    .where(where)
+    .orderBy(
+      filters.q && /^\d+$/.test(filters.q)
+        ? sql`CASE WHEN ${monsters.monsterId} = ${Number(filters.q)} THEN 0 ELSE 1 END`
+        : asc(monsters.monsterId),
+      asc(monsters.monsterId),
+    )
+    .limit(filters.pageSize)
+    .offset((page - 1) * filters.pageSize);
+  return {
+    items: rows.map(toBrief),
+    total,
+    page,
+    pageCount,
+  };
+}
+
+export async function getMonster(db: LibSQLDatabase, monsterId: number) {
+  const rows = await db
+    .select()
+    .from(monsters)
+    .where(eq(monsters.monsterId, monsterId))
+    .limit(1);
+  const monster = rows[0];
+  if (!monster) {
+    return null;
+  }
+  const skillIds = [monster.activeSkillId, monster.leaderSkillId].filter(
+    (id): id is number => typeof id === "number" && id > 0,
+  );
+  const skillRows = skillIds.length
+    ? await db.select().from(skills).where(inArray(skills.skillId, skillIds))
+    : [];
+  const skillById = new Map(skillRows.map((skill) => [skill.skillId, skill]));
+  const previous = monster.evoBaseId
+    ? await getBrief(db, monster.evoBaseId)
+    : null;
+  const nextRows = await db
+    .select(briefColumns)
+    .from(monsters)
+    .where(eq(monsters.evoBaseId, monsterId))
+    .orderBy(asc(monsters.monsterId));
+  const materialIds = parseNumberArray(monster.evoMaterialsJson).filter((id) => id > 0);
+  const materials = await getBriefs(db, materialIds);
+  const series = monster.evoRootId
+    ? (
+        await db
+          .select(briefColumns)
+          .from(monsters)
+          .where(
+            and(
+              eq(monsters.evoRootId, monster.evoRootId),
+              ne(monsters.monsterId, monsterId),
+              eq(monsters.isEmpty, false),
+            ),
+          )
+          .orderBy(asc(monsters.monsterId))
+          .limit(40)
+      ).map(toBrief)
+    : [];
+  const evolutionRow = await db
+    .select({
+      evolutionType: evolutions.evolutionType,
+      materialsJson: evolutions.materialsJson,
+    })
+    .from(evolutions)
+    .where(eq(evolutions.toMonsterId, monsterId))
+    .limit(1);
+
+  return {
+    monster,
+    types: parseNumberArray(monster.typesJson),
+    awakenings: parseNumberArray(monster.awakeningsJson),
+    superAwakenings: parseNumberArray(monster.superAwakeningsJson),
+    activeSkill: skillById.get(monster.activeSkillId ?? -1) ?? null,
+    leaderSkill: skillById.get(monster.leaderSkillId ?? -1) ?? null,
+    activeGrants: await grantedAwakenings(db, skillById.get(monster.activeSkillId ?? -1)),
+    leaderGrants: await grantedAwakenings(db, skillById.get(monster.leaderSkillId ?? -1)),
+    previous,
+    next: nextRows.map(toBrief),
+    materials,
+    missingMaterialIds: materialIds.filter(
+      (id) => !materials.some((material) => material.monsterId === id),
+    ),
+    series,
+    evolutionType: evolutionRow[0]?.evolutionType ?? null,
+  };
+}
+
+export async function neighborMonsterIds(db: LibSQLDatabase, monsterId: number) {
+  const visible = and(eq(monsters.isEmpty, false), eq(monsters.enabled, true));
+  const previous = await db
+    .select({ monsterId: monsters.monsterId })
+    .from(monsters)
+    .where(and(visible, lt(monsters.monsterId, monsterId)))
+    .orderBy(desc(monsters.monsterId))
+    .limit(1);
+  const next = await db
+    .select({ monsterId: monsters.monsterId })
+    .from(monsters)
+    .where(and(visible, gt(monsters.monsterId, monsterId)))
+    .orderBy(asc(monsters.monsterId))
+    .limit(1);
+  return {
+    previous: previous[0]?.monsterId ?? null,
+    next: next[0]?.monsterId ?? null,
+  };
+}
+
+async function grantedAwakenings(
+  db: LibSQLDatabase,
+  skill: { skillType: number | null; paramsJson: string } | undefined,
+) {
+  if (!skill || skill.skillType !== 116) {
+    return [];
+  }
+  const childIds = parseNumberArray(skill.paramsJson).filter((id) => id > 0);
+  if (childIds.length === 0) {
+    return [];
+  }
+  const children = await db
+    .select({ skillType: skills.skillType, paramsJson: skills.paramsJson })
+    .from(skills)
+    .where(inArray(skills.skillId, childIds));
+  return children.flatMap((child) =>
+    child.skillType === 250
+      ? parseNumberArray(child.paramsJson).filter((code) => code >= 1 && code <= 200)
+      : [],
+  );
+}
+
+async function getBrief(db: LibSQLDatabase, monsterId: number) {
+  const rows = await getBriefs(db, [monsterId]);
+  return rows[0] ?? null;
+}
+
+async function getBriefs(db: LibSQLDatabase, ids: number[]) {
+  if (ids.length === 0) {
+    return [];
+  }
+  const rows = await db
+    .select(briefColumns)
+    .from(monsters)
+    .where(inArray(monsters.monsterId, ids));
+  const byId = new Map(rows.map((row) => [row.monsterId, toBrief(row)]));
+  return ids.flatMap((id) => {
+    const brief = byId.get(id);
+    return brief ? [brief] : [];
+  });
+}
+
+function monsterWhere(filters: MonsterFilters) {
+  const clauses = [eq(monsters.isEmpty, false), eq(monsters.enabled, true)];
+  if (filters.q) {
+    const pattern = `%${filters.q.replace(/[\\%_]/g, "\\$&")}%`;
+    const textMatch = or(
+      sql`${monsters.name} LIKE ${pattern} ESCAPE '\\'`,
+      sql`${monsters.nameEn} LIKE ${pattern} ESCAPE '\\'`,
+      sql`${monsters.nameCht} LIKE ${pattern} ESCAPE '\\'`,
+      sql`${monsters.nameChs} LIKE ${pattern} ESCAPE '\\'`,
+      sql`${monsters.nameKo} LIKE ${pattern} ESCAPE '\\'`,
+    );
+    const textClause = textMatch ?? sql`1 = 0`;
+    clauses.push(
+      /^\d+$/.test(filters.q)
+        ? or(eq(monsters.monsterId, Number(filters.q)), textClause) ?? textClause
+        : textClause,
+    );
+  }
+  if (filters.attribute !== undefined) {
+    clauses.push(
+      or(
+        eq(monsters.attributePrimary, filters.attribute),
+        eq(monsters.attributeSecondary, filters.attribute),
+        eq(monsters.attributeTertiary, filters.attribute),
+      ) ?? eq(monsters.attributePrimary, filters.attribute),
+    );
+  }
+  if (filters.rarity !== undefined) {
+    clauses.push(eq(monsters.rarity, filters.rarity));
+  }
+  if (filters.type !== undefined) {
+    clauses.push(
+      sql`EXISTS (SELECT 1 FROM json_each(${monsters.typesJson}) WHERE json_each.value = ${filters.type})`,
+    );
+  }
+  if (filters.awakening !== undefined) {
+    clauses.push(
+      sql`EXISTS (SELECT 1 FROM monster_awakenings WHERE monster_id = ${monsters.monsterId} AND awakening_code = ${filters.awakening})`,
+    );
+  }
+  if (filters.slot) {
+    clauses.push(
+      sql`EXISTS (
+        SELECT 1 FROM monster_skills
+        WHERE monster_skills.monster_id = ${monsters.monsterId}
+          AND monster_skills.slot_type = ${filters.slot}
+      )`,
+    );
+  }
+  if (filters.effect) {
+    clauses.push(
+      sql`EXISTS (
+        SELECT 1 FROM monster_skills
+        JOIN skill_effects ON skill_effects.skill_id = monster_skills.skill_id
+        WHERE monster_skills.monster_id = ${monsters.monsterId}
+          AND skill_effects.effect_category = ${filters.effect}
+          AND skill_effects.parse_status != 'unparsed'
+      )`,
+    );
+  }
+  return and(...clauses);
+}
+
+function toBrief(row: {
+  monsterId: number;
+  name: string;
+  nameEn: string | null;
+  nameCht: string | null;
+  attributePrimary: number | null;
+  attributeSecondary: number | null;
+  attributeTertiary: number | null;
+  rarity: number | null;
+  typesJson: string;
+  maxLevel: number | null;
+  hpMax: number | null;
+  atkMax: number | null;
+  rcvMax: number | null;
+}): MonsterBrief {
+  return {
+    monsterId: row.monsterId,
+    name: row.name,
+    nameEn: row.nameEn,
+    nameCht: row.nameCht,
+    attributePrimary: row.attributePrimary,
+    attributeSecondary: row.attributeSecondary,
+    attributeTertiary: row.attributeTertiary,
+    rarity: row.rarity,
+    types: parseNumberArray(row.typesJson),
+    maxLevel: row.maxLevel,
+    hpMax: row.hpMax,
+    atkMax: row.atkMax,
+    rcvMax: row.rcvMax,
+  };
+}
+
+function parseNumberArray(value: string) {
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return Array.isArray(parsed)
+      ? parsed.filter((item): item is number => typeof item === "number")
+      : [];
+  } catch {
+    return [];
+  }
+}

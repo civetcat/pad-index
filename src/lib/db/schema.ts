@@ -76,6 +76,8 @@ export const monsters = sqliteTable(
     index("monsters_name_idx").on(table.name),
     index("monsters_rarity_idx").on(table.rarity),
     index("monsters_attribute_primary_idx").on(table.attributePrimary),
+    index("monsters_evo_base_idx").on(table.evoBaseId),
+    index("monsters_evo_root_idx").on(table.evoRootId),
   ],
 );
 
@@ -187,6 +189,86 @@ export const dataSources = sqliteTable("data_sources", {
   lastSuccessfulImportAt: text("last_successful_import_at"),
   status: text("status").notNull().default("not_imported"),
 });
+
+export const skillEffects = sqliteTable(
+  "skill_effects",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    skillId: integer("skill_id")
+      .notNull()
+      .references(() => skills.skillId),
+    effectCategory: text("effect_category").notNull(),
+    effectCode: text("effect_code"),
+    valueJson: text("value_json"),
+    duration: integer("duration"),
+    target: text("target"),
+    conditionsJson: text("conditions_json"),
+    rawEffectText: text("raw_effect_text").notNull(),
+    parserVersion: text("parser_version").notNull(),
+    parseStatus: text("parse_status", {
+      enum: ["parsed", "partial", "unparsed"],
+    }).notNull(),
+  },
+  (table) => [
+    index("skill_effects_skill_idx").on(table.skillId),
+    index("skill_effects_category_idx").on(table.effectCategory),
+  ],
+);
+
+export const users = sqliteTable("users", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  username: text("username").notNull().unique(),
+  passwordHash: text("password_hash").notNull(),
+  passwordSalt: text("password_salt").notNull(),
+  createdAt: text("created_at").notNull(),
+});
+
+export const sessions = sqliteTable("sessions", {
+  tokenHash: text("token_hash").primaryKey(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id),
+  expiresAt: text("expires_at").notNull(),
+});
+
+export const favorites = sqliteTable(
+  "favorites",
+  {
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id),
+    monsterId: integer("monster_id").notNull(),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.monsterId] })],
+);
+
+export const savedTeams = sqliteTable("saved_teams", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id),
+  name: text("name").notNull(),
+  monsterIdsJson: text("monster_ids_json").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
+export const upstreamChecks = sqliteTable(
+  "upstream_checks",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    sourceId: integer("source_id")
+      .notNull()
+      .references(() => dataSources.id),
+    checkedAt: text("checked_at").notNull(),
+    status: text("status").notNull(),
+    latestRevision: text("latest_revision"),
+    importedRevision: text("imported_revision"),
+    summaryJson: text("summary_json"),
+    errorMessage: text("error_message"),
+  },
+  (table) => [index("upstream_checks_source_idx").on(table.sourceId)],
+);
 
 export const importRuns = sqliteTable(
   "import_runs",

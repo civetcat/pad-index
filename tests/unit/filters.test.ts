@@ -1,0 +1,17 @@
+import { describe, expect, it } from "vitest";
+import { catalogHref, parseMonsterFilters } from "@/lib/queries/filters";
+
+describe("catalog filters", () => {
+  it("ignores invalid numbers instead of guessing", () => {
+    const filters = parseMonsterFilters({ attr: "fire", rarity: "8", page: "0" });
+    expect(filters.attribute).toBeUndefined();
+    expect(filters.rarity).toBe(8);
+    expect(filters.page).toBe(1);
+  });
+
+  it("keeps combined filters in the result link", () => {
+    expect(catalogHref({ q: "Tyrra", attribute: 0, effect: "heal" }, 2)).toBe(
+      "/?q=Tyrra&attr=0&effect=heal&page=2",
+    );
+  });
+});
