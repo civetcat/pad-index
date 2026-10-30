@@ -9,6 +9,7 @@ export type MonsterFilters = {
   skill: string;
   effect?: string;
   slot?: "active" | "leader";
+  substitutes: boolean;
   page: number;
   pageSize: number;
 };
@@ -25,6 +26,7 @@ export function parseMonsterFilters(
     skill: first(params.skill)?.trim() ?? "",
     effect: first(params.effect)?.trim() || undefined,
     slot: parseSlot(first(params.slot)),
+    substitutes: first(params.sub) === "1",
     page: Math.max(1, optionalInt(first(params.page)) ?? 1),
     pageSize: PAGE_SIZE,
   };
@@ -58,6 +60,9 @@ export function catalogHref(
   }
   if (filters.slot) {
     params.set("slot", filters.slot);
+  }
+  if (filters.substitutes) {
+    params.set("sub", "1");
   }
   if (page > 1) {
     params.set("page", String(page));

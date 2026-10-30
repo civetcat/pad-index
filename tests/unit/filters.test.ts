@@ -20,5 +20,7 @@ describe("catalog filters", () => {
     expect(catalogHref({ awakenings: [{ code: 21, count: 1 }, { code: 49, count: 2 }], skill: "fire", slot: "leader" })).toBe(
       "/?awk=21&awk=49x2&skill=fire&slot=leader",
     );
+    expect(parseMonsterFilters({ sub: "1" }).substitutes).toBe(true);
+    expect(catalogHref({ q: "1", substitutes: true })).toBe("/?q=1&sub=1");
   });
 });

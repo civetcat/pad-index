@@ -13,6 +13,7 @@ export async function GET(request: Request) {
     skill: url.searchParams.get("skill") ?? undefined,
     effect: url.searchParams.get("effect") ?? undefined,
     slot: url.searchParams.get("slot") ?? undefined,
+    sub: url.searchParams.get("sub") ?? undefined,
     page: url.searchParams.get("page") ?? undefined,
   });
   const database = await getAppDatabase();

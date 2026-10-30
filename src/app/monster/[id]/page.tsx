@@ -37,7 +37,10 @@ export default async function MonsterPage({
     <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-4 px-4 py-6">
       <div className="flex items-center justify-between gap-3">
         <Link className="text-sm text-muted" href="/">返回列表</Link>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap justify-end gap-2">
+          <Link className="rounded border border-line bg-card px-3 py-1 text-sm" href={`/substitute?id=${monster.monsterId}`}>
+            代用
+          </Link>
           <MonsterStep href={neighbors.previous} label="上一隻" />
           <MonsterStep href={neighbors.next} label="下一隻" />
         </div>

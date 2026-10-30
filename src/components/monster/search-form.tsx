@@ -71,6 +71,16 @@ export function SearchForm({ filters }: { filters: MonsterFilters }) {
         </select>
       </label>
       <AwakeningFilter selected={filters.awakenings} />
+      <label className="flex items-center gap-2 text-sm sm:col-span-2 lg:col-span-3">
+        <input
+          className="h-4 w-4"
+          type="checkbox"
+          name="sub"
+          value="1"
+          defaultChecked={filters.substitutes}
+        />
+        <span>代用（技能效果相近也列出，回合數或倍率可以不同）</span>
+      </label>
       <div className="flex items-end gap-2 sm:col-span-2 lg:col-span-3">
         <button className="rounded bg-accent px-4 py-2 text-sm font-medium text-white" type="submit">
           搜尋

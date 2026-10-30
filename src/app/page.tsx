@@ -32,6 +32,13 @@ export default async function Home({
         <p className="text-sm text-muted">{result.total} 筆符合，資料庫 {status.count} 筆</p>
       </div>
       <SearchForm filters={filters} />
+      {filters.substitutes ? (
+        <p className="text-sm text-muted">
+          {filters.q || filters.attribute !== undefined || filters.rarity !== undefined || filters.type !== undefined || filters.awakenings.length || filters.skill || filters.effect || filters.slot
+            ? "代用已開啟。結果含技能效果相近的怪物，例如 13 回合和 10 回合的屬性吸收。"
+            : "代用已勾選，但還沒有其他條件，所以不會把全圖鑑展開。"}
+        </p>
+      ) : null}
       {result.items.length === 0 ? (
         <p className="rounded border border-line bg-card p-6 text-muted">沒有符合的怪物。</p>
       ) : (

@@ -5,6 +5,7 @@ import { applyMigrations } from "@/lib/db/migrate";
 import { importParsedData } from "@/lib/import/run-import";
 import { parseMonsterFilters } from "@/lib/queries/filters";
 import { getMonster, listMonsters } from "@/lib/queries/monsters";
+import { findSubstitutes } from "@/lib/queries/substitutes";
 import heatBreath from "../fixtures/skill-heat-breath.json";
 
 const shape = JSON.parse(
@@ -71,6 +72,61 @@ describe("catalog queries", () => {
       });
       expect(again.added).toBe(0);
       expect(again.unchanged).toBe(2);
+    } finally {
+      opened.client.close();
+    }
+  });
+
+  it("lists only exact skill substitutes", async () => {
+    const opened = await applyMigrations(":memory:");
+    try {
+      await importParsedData(opened.db, {
+        revision: "test-revision",
+        monsters: [
+          shape,
+          { ...shape, id: 2, name: "same-skill", evoBaseId: 0 },
+          { ...shape, id: 3, name: "same-text", evoBaseId: 0, activeSkillId: 9, leaderSkillId: 0 },
+          { ...shape, id: 4, name: "other-number", evoBaseId: 0, activeSkillId: 10, leaderSkillId: 0 },
+        ],
+        skills: [
+          heatBreath,
+          { ...heatBreath, id: 9, name: "alias" },
+          { ...heatBreath, id: 10, name: "thirteen", description: "敵全体に攻撃力×13倍の火属性攻撃。" },
+          { ...heatBreath, id: 51, name: "leader", description: "未分類" },
+        ],
+      });
+      const groups = await findSubstitutes(opened.db, 1);
+      expect(groups?.find((group) => group.title === "相同主動技能")?.monsters.map((item) => item.monsterId)).toEqual([2]);
+      expect(groups?.find((group) => group.title === "主動技能相近")?.monsters.map((item) => item.monsterId).sort()).toEqual([3, 4]);
+      const expanded = await listMonsters(opened.db, parseMonsterFilters({ q: "1", sub: "1" }));
+      expect(expanded.items.map((item) => item.monsterId).sort()).toEqual([1, 2, 3, 4]);
+    } finally {
+      opened.client.close();
+    }
+  });
+
+  it("matches attribute absorb when the turn count and the rest of the sentence differ", async () => {
+    const opened = await applyMigrations(":memory:");
+    try {
+      await importParsedData(opened.db, {
+        revision: "absorb",
+        monsters: [
+          { ...shape, id: 10, name: "ten-turn", evoBaseId: 0, activeSkillId: 100, leaderSkillId: 0 },
+          { ...shape, id: 11, name: "combined", evoBaseId: 0, activeSkillId: 101, leaderSkillId: 0 },
+          { ...shape, id: 12, name: "split-line", evoBaseId: 0, activeSkillId: 102, leaderSkillId: 0 },
+          { ...shape, id: 13, name: "board-only", evoBaseId: 0, activeSkillId: 103, leaderSkillId: 0 },
+        ],
+        skills: [
+          { ...heatBreath, id: 100, name: "ten", description: "10ターンの間、属性吸収を無効化。\n盤面を[火][水][回復]に変化。" },
+          { ...heatBreath, id: 101, name: "two", description: "2ターンの間、ダメージ吸収と属性吸収を無効化。" },
+          { ...heatBreath, id: 102, name: "seven", description: "7ターンの間、属性吸収を\n無効化。" },
+          { ...heatBreath, id: 103, name: "board", description: "盤面を[火][水][回復]に変化。" },
+        ],
+      });
+      const groups = await findSubstitutes(opened.db, 10);
+      expect(groups?.find((group) => group.title === "主動技能相近")?.monsters.map((item) => item.monsterId).sort()).toEqual([11, 12]);
+      const expanded = await listMonsters(opened.db, parseMonsterFilters({ q: "10", sub: "1" }));
+      expect(expanded.items.map((item) => item.monsterId).sort()).toEqual([10, 11, 12]);
     } finally {
       opened.client.close();
     }

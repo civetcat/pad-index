@@ -6,6 +6,7 @@ import {
   skills,
 } from "@/lib/db/schema";
 import { skillSearchNeedles } from "@/lib/skills/search";
+import { likenessMatch } from "@/lib/skills/similar-sql";
 import type { MonsterFilters } from "./filters";
 
 const briefColumns = {
@@ -41,7 +42,10 @@ export type MonsterBrief = {
 };
 
 export async function listMonsters(db: LibSQLDatabase, filters: MonsterFilters) {
-  const where = monsterWhere(filters);
+  const similar = filters.substitutes && hasSearchConstraint(filters)
+    ? await likenessFromMatches(db, filters)
+    : null;
+  const where = monsterWhere(filters, similar);
   const totalRow = await db.select({ total: count() }).from(monsters).where(where);
   const total = totalRow[0]?.total ?? 0;
   const pageCount = Math.max(1, Math.ceil(total / filters.pageSize));
@@ -200,7 +204,58 @@ async function getBriefs(db: LibSQLDatabase, ids: number[]) {
   });
 }
 
-function monsterWhere(filters: MonsterFilters) {
+function monsterWhere(filters: MonsterFilters, similar: SQL | null) {
+  const base = baseWhere(filters);
+  if (!filters.substitutes || !hasSearchConstraint(filters) || !similar) {
+    return base;
+  }
+  return and(
+    eq(monsters.isEmpty, false),
+    eq(monsters.enabled, true),
+    or(
+      sql`${monsters.monsterId} IN (SELECT ${monsters.monsterId} FROM ${monsters} WHERE ${base})`,
+      sql`${monsters.activeSkillId} IN (SELECT skill_id FROM skills WHERE ${similar})`,
+      sql`${monsters.leaderSkillId} IN (SELECT skill_id FROM skills WHERE ${similar})`,
+    ),
+  );
+}
+
+async function likenessFromMatches(db: LibSQLDatabase, filters: MonsterFilters) {
+  const hits = await db
+    .select({
+      activeSkillId: monsters.activeSkillId,
+      leaderSkillId: monsters.leaderSkillId,
+    })
+    .from(monsters)
+    .where(baseWhere(filters))
+    .limit(30);
+  const skillIds = [...new Set(
+    hits.flatMap((hit) => [hit.activeSkillId, hit.leaderSkillId]).filter((id): id is number => typeof id === "number" && id > 0),
+  )].slice(0, 40);
+  if (skillIds.length === 0) {
+    return null;
+  }
+  const rows = await db
+    .select({ description: skills.description })
+    .from(skills)
+    .where(inArray(skills.skillId, skillIds));
+  return likenessMatch(rows.map((row) => row.description));
+}
+
+function hasSearchConstraint(filters: MonsterFilters) {
+  return Boolean(
+    filters.q
+    || filters.attribute !== undefined
+    || filters.rarity !== undefined
+    || filters.type !== undefined
+    || filters.awakenings.length
+    || filters.skill
+    || filters.effect
+    || filters.slot,
+  );
+}
+
+function baseWhere(filters: MonsterFilters) {
   const clauses = [eq(monsters.isEmpty, false), eq(monsters.enabled, true)];
   if (filters.q) {
     const pattern = `%${filters.q.replace(/[\\%_]/g, "\\$&")}%`;

@@ -13,6 +13,7 @@ export function SiteHeader() {
           <Link className="shrink-0 rounded px-2 py-2" href="/">圖鑑</Link>
           <Link className="shrink-0 rounded px-2 py-2" href="/team">隊伍</Link>
           <Link className="shrink-0 rounded px-2 py-2" href="/compare">比較</Link>
+          <Link className="shrink-0 rounded px-2 py-2" href="/substitute">代用</Link>
           <Link className="shrink-0 rounded px-2 py-2" href="/calc">倍率</Link>
           <Link className="shrink-0 rounded px-2 py-2" href="/collection">收藏</Link>
           <Link className="shrink-0 rounded px-2 py-2" href="/account">帳號</Link>
