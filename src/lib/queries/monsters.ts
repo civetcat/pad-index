@@ -57,8 +57,8 @@ export async function listMonsters(db: LibSQLDatabase, filters: MonsterFilters) 
     .orderBy(
       filters.q && /^\d+$/.test(filters.q)
         ? sql`CASE WHEN ${monsters.monsterId} = ${Number(filters.q)} THEN 0 ELSE 1 END`
-        : asc(monsters.monsterId),
-      asc(monsters.monsterId),
+        : desc(monsters.monsterId),
+      desc(monsters.monsterId),
     )
     .limit(filters.pageSize)
     .offset((page - 1) * filters.pageSize);

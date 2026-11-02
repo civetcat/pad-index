@@ -5,10 +5,18 @@ const orbSheet = "https://mapaler.github.io/PADDashFormation/images/icon-orbs.pn
 const skillSheet = "https://mapaler.github.io/PADDashFormation/images/icon-skills.png";
 const typeSheet = "https://mapaler.github.io/PADDashFormation/images/type.png";
 
-export function SkillText({ text }: { text: string }) {
+export function SkillText({
+  text,
+  lang = "ja",
+  muted = false,
+}: {
+  text: string;
+  lang?: string;
+  muted?: boolean;
+}) {
   const parts = displaySkillText(text).split(/(\[[^\]\n]+\])/g);
   return (
-    <p lang="ja" className="mt-2 whitespace-pre-wrap text-sm leading-8">
+    <p lang={lang} className={`mt-2 whitespace-pre-wrap text-sm leading-8${muted ? " text-muted" : ""}`}>
       {parts.map((part, index) => {
         const name = part.match(/^\[([^\]\n]+)\]$/)?.[1];
         const icon = name ? skillTokenIcon(name) : null;

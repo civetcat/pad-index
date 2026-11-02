@@ -250,19 +250,16 @@ function SkillBlock({
         <>
           <p lang="ja" className="mt-2 font-medium">{skill.name || "未命名"}</p>
           {presented.note ? <SkillText text={presented.note} /> : null}
-          {presented.assistVanishes ? <p className="text-sm">使用時，這隻輔助會消失。</p> : null}
+          {presented.note ? <SkillText text={skillTextCht(presented.note)} lang="zh-Hant" muted /> : null}
           {presented.body ? <SkillText text={presented.body} /> : null}
           {presented.body ? (
-            <p lang="zh-Hant" className="mt-1 whitespace-pre-wrap text-sm leading-7 text-muted">
-              {skillTextCht(presented.body)}
+            <SkillText text={skillTextCht(presented.body)} lang="zh-Hant" muted />
+          ) : null}
+          {skill.initialCooldown === 0 && skill.maxLevel === 0 ? null : (
+            <p className="mt-2 text-sm text-muted">
+              初始冷卻 {skill.initialCooldown ?? "未知"}，最高 {skill.maxLevel ?? "未知"} 級
             </p>
-          ) : null}
-          {presented.hasteTurns !== null ? (
-            <p className="mt-2 text-sm">其他技能縮短 {presented.hasteTurns} 回合。</p>
-          ) : null}
-          <p className="mt-2 text-sm text-muted">
-            初始冷卻 {skill.initialCooldown ?? "未知"}，最高 {skill.maxLevel ?? "未知"} 級
-          </p>
+          )}
         </>
       ) : (
         <p className="mt-2 text-sm text-muted">{emptyLabel}</p>

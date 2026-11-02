@@ -1,6 +1,6 @@
 # Cloudflare 部署
 
-公開網址：https://pad-index.darkangel20305123.workers.dev
+公開網址：https://padsearcher.darkangel20305123.workers.dev
 
 自訂網域還沒設定。要綁自己的網域，需在 Cloudflare 加入該網域後再加 Worker route。
 

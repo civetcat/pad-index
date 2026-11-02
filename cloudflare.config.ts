@@ -2,7 +2,7 @@ import { bindings, defineConfig, defineWorker } from "cf/config";
 
 export default defineConfig({
   worker: defineWorker({
-    name: "pad-index",
+    name: "padsearcher",
     entrypoint: "vinext/server/fetch-handler",
     compatibilityDate: "2026-10-30",
     compatibilityFlags: ["nodejs_compat"],

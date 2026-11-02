@@ -1,5 +1,7 @@
 export const skillPhrases: Array<{ ja: string; cht: string }> = [
   ["自分以外のスキルが", "其他技能"],
+  ["を付与", "賦予"],
+  ["付与", "賦予"],
   ["スキルが進化", "技能進化"],
   ["ダメージ吸収を無効", "傷害吸收無效"],
   ["属性吸収を無効", "屬性吸收無效"],
@@ -55,6 +57,20 @@ const ordered = [...skillPhrases].sort((left, right) => right.ja.length - left.j
 
 export function skillTextCht(input: string) {
   let text = input.replaceAll("|5属性|", "").replaceAll("^qs^", "").replaceAll("^p", "");
+  const brackets: string[] = [];
+  text = text.replace(/\[[^\]\n]+\]/g, (token) => {
+    const marker = `\u0001${brackets.length}\u0001`;
+    brackets.push(token);
+    return marker;
+  });
+  text = text
+    .replace(
+      /このモンスターはアシスト時のみ\s*スキルを使用する事が出来る。?/g,
+      "這隻怪物只有作為輔助時，才能使用技能。",
+    )
+    .replace(/スキル使用時、このアシストが消滅する。?/g, "使用技能時，這隻輔助會消失。")
+    .replace(/((?:\u0001\d+\u0001)+)を付与/g, "附加$1")
+    .replace(/自分以外のスキルが(\d+)ターン溜まる/g, "自身以外的技能縮短 $1 回合");
   const slots: string[] = [];
   for (const phrase of ordered) {
     if (!text.includes(phrase.ja)) {
@@ -65,6 +81,10 @@ export function skillTextCht(input: string) {
     text = text.replaceAll(phrase.ja, token);
   }
   text = text
+    .replace(/(\d+)ターン溜まる/g, "縮短 $1 回合")
+    .replaceAll("この", "這個")
+    .replaceAll("その", "那個")
+    .replaceAll("のみ", "僅")
     .replaceAll("の", "的")
     .replaceAll("と", "和")
     .replaceAll("を", "")
@@ -73,6 +93,7 @@ export function skillTextCht(input: string) {
     .replaceAll("で", "")
     .replaceAll("、", "，")
     .replace(/\u0000(\d+)\u0000/g, (_match, index: string) => slots[Number(index)] ?? "")
+    .replace(/\u0001(\d+)\u0001/g, (_match, index: string) => brackets[Number(index)] ?? "")
     .replace(/[ \t]{2,}/g, " ")
     .trim();
   return text;
